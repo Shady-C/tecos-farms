@@ -6,7 +6,7 @@ A lean, mobile-first order management system for Teco's Farms (Tanzania). Replac
 
 ## Project context
 
-Full vision, architecture, schema, and phases are in **[docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md)**.
+Full vision, architecture, schema, and phases are in **[docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md)**. For the full documentation set (overview, API, codebase, deployment, etc.), see **[docs/README.md](docs/README.md)**.
 
 ## Status
 
