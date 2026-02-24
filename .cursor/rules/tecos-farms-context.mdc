@@ -1,0 +1,16 @@
+---
+description: Teco's Farms OMS — project context and constraints
+alwaysApply: true
+---
+
+# Teco's Farms — Order Management System
+
+Small Tanzania-based business: lean, mobile-first, $0/month target. Replaces WhatsApp-to-spreadsheet ordering.
+
+**Stack:** Next.js (App Router), Tailwind, Supabase, Vercel. Admin auth via Supabase only; no customer auth. PDF with `@react-pdf/renderer` (server-side).
+
+**Key constraints:** Fast on slow mobile networks; minimal JS on public form; snapshot `price_per_kg` and `total_price` at order time; admin APIs require Supabase session and use service-role client.
+
+**Full context:** [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md) — vision, architecture, schema, phases (MVP → refinements → growth). Implementation plan in `.cursor/plans/` if present.
+
+When adding features, keep Phase 1 scope (order form, admin orders/settings, PDF export); Phase 2/3 items are documented in PROJECT_CONTEXT.md.
