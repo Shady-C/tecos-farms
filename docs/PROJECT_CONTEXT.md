@@ -2,6 +2,11 @@
 
 This document is the single source of truth for the project's vision, constraints, architecture, and roadmap. Use it to onboard or to keep AI and future work aligned.
 
+**Current Phase:** 1
+**Phase Status:** in_review
+**Jira Epic:** (none yet)
+**Confluence Space:** SD
+
 ---
 
 ## What This Is

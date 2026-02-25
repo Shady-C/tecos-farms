@@ -6,18 +6,9 @@
 
 ---
 
-## Changelog / version history
+## Changelog
 
-Changelog is maintained in this section (or can be moved to a root `CHANGELOG.md` when the team adopts it).
-
-### Initial release (Phase 1 MVP)
-
-- Public order form (mobile-first) at `/order`.
-- Admin dashboard: orders list with filters (delivery batch, payment status); mark paid/unpaid, confirm, delivered; notes.
-- Settings: price per kg, order cutoff day/time, delivery day.
-- PDF export by delivery batch (grouped by area).
-- Excel export by delivery batch.
-- Admin auth (Supabase email/password); middleware protection for `/admin/*`.
+The full changelog is maintained at [CHANGELOG.md](../CHANGELOG.md) in the project root. It follows the [Keep a Changelog](https://keepachangelog.com/) format and is organized by phase.
 
 ---
 
@@ -28,14 +19,16 @@ Changelog is maintained in this section (or can be moved to a root `CHANGELOG.md
 
 ---
 
-## Decision log (Architectural Decision Records)
+## Decision Log (Architecture Decision Records)
 
-There is no formal `docs/adr/` folder yet. Key decisions are recorded in:
+ADRs are stored in `docs/decisions/` as numbered markdown files. Each records the context, decision, alternatives considered, and consequences.
 
-- [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md) — vision, tech choices, design decisions.
-- [03-architecture.md](03-architecture.md) — design decisions and rationale.
+| ADR | Title | Status |
+|-----|-------|--------|
+| [0001](decisions/0001-no-customer-auth.md) | No Customer Authentication | Accepted |
+| [0002](decisions/0002-price-snapshot-at-order-time.md) | Snapshot Price at Order Time | Accepted |
 
-**Optional:** Add `docs/adr/` and an initial ADR summarizing: no customer auth; price snapshot at order time; service role used only in API routes server-side.
+New ADRs are created whenever a decision deviates from the documented plan. See [decisions/_template.md](decisions/_template.md) for the format.
 
 ---
 
@@ -45,4 +38,25 @@ Add when relevant (e.g. kickoff, release, or major scope decisions).
 
 ---
 
-*Update notes: Initial version; reflects codebase as of 2026-02-24.*
+## Phase 1 Retrospective — 2026-02-24
+
+### What was delivered
+
+- Public order form (mobile-first) at `/order`
+- Admin dashboard: orders list with filters (delivery batch, payment status)
+- Order management: mark paid/unpaid, confirm, delivered, notes
+- Settings page: price per kg, order cutoff day/time, delivery day
+- PDF export by delivery batch (grouped by area)
+- Excel export by delivery batch
+- Admin authentication via Supabase (email/password)
+- Middleware protection for `/admin/*` routes
+- Full documentation suite (14 docs) published to Confluence
+
+### Decisions made (ADRs)
+
+- [ADR-0001](decisions/0001-no-customer-auth.md): No customer authentication
+- [ADR-0002](decisions/0002-price-snapshot-at-order-time.md): Snapshot price at order time
+
+---
+
+*Update notes: Updated 2026-02-24; added ADR system, changelog reference, Phase 1 retrospective.*

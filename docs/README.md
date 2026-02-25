@@ -6,7 +6,7 @@
 
 **Audience:** Developers, QA, product managers, and new team members.
 
-**Document version:** Last updated 2026-02-24; aligns with Phase 1 MVP.
+**Document version:** Last updated 2026-02-24; aligns with Phase 1 (in review).
 
 ---
 
@@ -26,8 +26,13 @@
 | [09-deployment.md](09-deployment.md) | Environment, deploy steps, CI/CD |
 | [10-user-support.md](10-user-support.md) | User guides, troubleshooting, FAQ |
 | [11-standards.md](11-standards.md) | Coding standards, naming, doc maintenance |
+| [CONFLUENCE_SETUP.md](CONFLUENCE_SETUP.md) | Confluence space setup and Composer prompt to publish docs |
+| [WORKFLOW_GUIDE.md](WORKFLOW_GUIDE.md) | Skills, conventions, and quick commands cheat sheet |
+| [decisions/](decisions/) | Architecture Decision Records (ADRs) — logged decisions with rationale |
 
 **Source of truth for vision and schema:** [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md).
+
+**Changelog:** [CHANGELOG.md](../CHANGELOG.md) — tracks what shipped in each phase.
 
 ---
 

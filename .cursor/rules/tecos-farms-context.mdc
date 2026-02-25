@@ -1,5 +1,5 @@
 ---
-description: Teco's Farms OMS — project context and constraints
+description: Teco's Farms OMS — project context, constraints, and lifecycle
 alwaysApply: true
 ---
 
@@ -11,6 +11,12 @@ Small Tanzania-based business: lean, mobile-first, $0/month target. Replaces Wha
 
 **Key constraints:** Fast on slow mobile networks; minimal JS on public form; snapshot `price_per_kg` and `total_price` at order time; admin APIs require Supabase session and use service-role client.
 
-**Full context:** [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md) — vision, architecture, schema, phases (MVP → refinements → growth). Implementation plan in `.cursor/plans/` if present.
+**Full context:** [docs/PROJECT_CONTEXT.md](docs/PROJECT_CONTEXT.md) — vision, architecture, schema, phases (MVP → refinements → growth).
 
-When adding features, keep Phase 1 scope (order form, admin orders/settings, PDF export); Phase 2/3 items are documented in PROJECT_CONTEXT.md.
+## Phase Awareness
+
+Check the **Current Phase** field at the top of `docs/PROJECT_CONTEXT.md` before implementing features. Phase 1 (MVP) is complete. Only build features in the current phase scope unless explicitly overridden.
+
+## Change Tracking
+
+If your implementation deviates from the documented plan, follow the `track-change` skill: create an ADR in `docs/decisions/`, update `CHANGELOG.md`, and update affected docs. See also `.cursor/rules/project-lifecycle.mdc`.
