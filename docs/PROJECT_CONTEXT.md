@@ -4,7 +4,8 @@ This document is the single source of truth for the project's vision, constraint
 
 **Current Phase:** 1
 **Phase Status:** in_review
-**Jira Epic:** (none yet)
+**Jira Epic:** TF-1
+**CI/CD Epic:** TF-10
 **Confluence Space:** SD
 
 ---
