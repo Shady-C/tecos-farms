@@ -42,7 +42,7 @@ export default function OrderPage() {
       ? Math.round(kilosNum * settings.price_per_kg)
       : 0;
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
     if (!settings || kilosNum <= 0) return;
     setSubmitState("submitting");

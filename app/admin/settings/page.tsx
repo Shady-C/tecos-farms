@@ -32,7 +32,7 @@ export default function AdminSettingsPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
     if (!settings) return;
     setSaving(true);
