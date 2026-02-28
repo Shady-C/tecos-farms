@@ -4,14 +4,14 @@ import { getNextDeliveryBatch } from "@/lib/delivery";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  let body: { customer_name?: string; phone?: string; area?: string; kilos?: number };
+  let body: { customer_name?: string; phone?: string; email?: string; area?: string; kilos?: number };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { customer_name, phone, area, kilos } = body;
+  const { customer_name, phone, email, area, kilos } = body;
   if (
     typeof customer_name !== "string" ||
     !customer_name.trim() ||
@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     .insert({
       customer_name: customer_name.trim(),
       phone: phone.trim(),
+      email: typeof email === "string" && email.trim() ? email.trim() : null,
       area: area.trim(),
       kilos,
       price_per_kg: pricePerKg,
@@ -103,6 +104,7 @@ export async function GET(request: Request) {
     id: row.id,
     customer_name: row.customer_name,
     phone: row.phone,
+    email: row.email ?? null,
     area: row.area,
     kilos: Number(row.kilos),
     price_per_kg: Number(row.price_per_kg),

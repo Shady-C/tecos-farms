@@ -6,6 +6,7 @@ export interface Order {
   id: string;
   customer_name: string;
   phone: string;
+  email: string | null;
   area: string;
   kilos: number;
   price_per_kg: number;
