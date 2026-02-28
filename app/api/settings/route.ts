@@ -1,6 +1,7 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/supabase/auth";
 import { NextResponse } from "next/server";
+import type { DeliveryZone } from "@/types";
 
 export async function GET() {
   const session = await getSession();
@@ -22,12 +23,17 @@ export async function GET() {
     );
   }
 
+  const zones: DeliveryZone[] = Array.isArray(data.delivery_zones)
+    ? data.delivery_zones
+    : [];
+
   return NextResponse.json({
     id: data.id,
     price_per_kg: Number(data.price_per_kg),
     order_cutoff_day: data.order_cutoff_day,
     order_cutoff_time: data.order_cutoff_time,
     delivery_day: data.delivery_day,
+    delivery_zones: zones,
   });
 }
 
@@ -42,6 +48,7 @@ export async function PUT(request: Request) {
     order_cutoff_day?: string;
     order_cutoff_time?: string;
     delivery_day?: string;
+    delivery_zones?: DeliveryZone[];
   };
   try {
     body = await request.json();
@@ -54,6 +61,7 @@ export async function PUT(request: Request) {
   if (typeof body.order_cutoff_day === "string") updates.order_cutoff_day = body.order_cutoff_day;
   if (typeof body.order_cutoff_time === "string") updates.order_cutoff_time = body.order_cutoff_time;
   if (typeof body.delivery_day === "string") updates.delivery_day = body.delivery_day;
+  if (Array.isArray(body.delivery_zones)) updates.delivery_zones = body.delivery_zones;
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
@@ -82,11 +90,16 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  const zones: DeliveryZone[] = Array.isArray(data.delivery_zones)
+    ? data.delivery_zones
+    : [];
+
   return NextResponse.json({
     id: data.id,
     price_per_kg: Number(data.price_per_kg),
     order_cutoff_day: data.order_cutoff_day,
     order_cutoff_time: data.order_cutoff_time,
     delivery_day: data.delivery_day,
+    delivery_zones: zones,
   });
 }

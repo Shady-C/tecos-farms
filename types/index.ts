@@ -2,6 +2,12 @@ export type PaymentStatus = "unpaid" | "prepaid" | "paid";
 export type PaymentMethod = "cash" | "mobile_money" | null;
 export type OrderStatus = "pending" | "confirmed" | "delivered";
 
+export interface DeliveryZone {
+  name: string;
+  icon: string;
+  detail: string;
+}
+
 export interface Order {
   id: string;
   customer_name: string;
@@ -25,4 +31,5 @@ export interface Settings {
   order_cutoff_day: string;
   order_cutoff_time: string;
   delivery_day: string;
+  delivery_zones: DeliveryZone[];
 }

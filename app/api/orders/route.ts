@@ -4,14 +4,23 @@ import { getNextDeliveryBatch } from "@/lib/delivery";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
-  let body: { customer_name?: string; phone?: string; email?: string; area?: string; kilos?: number };
+  let body: {
+    customer_name?: string;
+    phone?: string;
+    email?: string;
+    area?: string;
+    kilos?: number;
+    payment_method?: "cash" | "mobile_money";
+    prepay?: boolean;
+    notes?: string;
+  };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { customer_name, phone, email, area, kilos } = body;
+  const { customer_name, phone, email, area, kilos, payment_method, prepay, notes } = body;
   if (
     typeof customer_name !== "string" ||
     !customer_name.trim() ||
@@ -47,6 +56,13 @@ export async function POST(request: Request) {
   const deliveryBatch = getNextDeliveryBatch(settings.delivery_day ?? "saturday");
   const totalPrice = Math.round(kilos * pricePerKg);
 
+  // Determine payment status from method + prepay intent
+  const resolvedPaymentMethod = payment_method ?? null;
+  const paymentStatus =
+    resolvedPaymentMethod === "mobile_money" && prepay === true
+      ? "prepaid"
+      : "unpaid";
+
   const { data: order, error } = await supabase
     .from("orders")
     .insert({
@@ -58,8 +74,10 @@ export async function POST(request: Request) {
       price_per_kg: pricePerKg,
       total_price: totalPrice,
       delivery_batch: deliveryBatch,
-      payment_status: "unpaid",
+      payment_method: resolvedPaymentMethod,
+      payment_status: paymentStatus,
       order_status: "pending",
+      notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
     })
     .select("id, total_price, delivery_batch")
     .single();

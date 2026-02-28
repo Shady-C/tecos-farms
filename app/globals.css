@@ -1,1 +1,115 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-outfit), sans-serif;
+  --font-mono: var(--font-space-mono), monospace;
+
+  --color-brand-bg: #faf7f2;
+  --color-brand-surface: #f2ede4;
+  --color-brand-border: #e5ddd0;
+  --color-brand-accent: #c94f1a;
+  --color-brand-accent-light: #f97316;
+  --color-brand-accent-bg: #fff4ee;
+  --color-brand-text: #1a1510;
+  --color-brand-muted: #8a7d6e;
+  --color-brand-dim: #c4b8a8;
+  --color-brand-green: #1a7a4a;
+  --color-brand-green-bg: #eefaf3;
+  --color-brand-green-border: #b6e8ce;
+}
+
+:root {
+  --bg: #faf7f2;
+  --white: #ffffff;
+  --surface: #f2ede4;
+  --border: #e5ddd0;
+  --accent: #c94f1a;
+  --accent-light: #f97316;
+  --accent-bg: #fff4ee;
+  --text: #1a1510;
+  --muted: #8a7d6e;
+  --dim: #c4b8a8;
+  --green: #1a7a4a;
+  --green-bg: #eefaf3;
+  --green-border: #b6e8ce;
+  --shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: var(--font-outfit), sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--dim);
+  font-weight: 400;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+@keyframes bump {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes popIn {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease both;
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 1.8s infinite;
+}
+
+.animate-bump {
+  animation: bump 0.15s ease;
+}
+
+.animate-pop-in {
+  animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}

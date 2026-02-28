@@ -1,5 +1,20 @@
 import type { Metadata } from "next";
+import { Outfit, Space_Mono } from "next/font/google";
 import "./globals.css";
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit",
+  weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const spaceMono = Space_Mono({
+  subsets: ["latin"],
+  variable: "--font-space-mono",
+  weight: ["400", "700"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Teco's Farms — Order",
@@ -13,7 +28,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased min-h-screen bg-stone-50 text-stone-900">
+      <body className={`${outfit.variable} ${spaceMono.variable} antialiased min-h-screen`}>
         {children}
       </body>
     </html>
