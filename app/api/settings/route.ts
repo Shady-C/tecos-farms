@@ -60,11 +60,22 @@ export async function PUT(request: Request) {
   }
 
   const supabase = createServiceRoleClient();
+
+  const { data: current } = await supabase
+    .from("settings")
+    .select("id")
+    .limit(1)
+    .single();
+
+  if (!current) {
+    return NextResponse.json({ error: "Settings not found" }, { status: 404 });
+  }
+
   const { data, error } = await supabase
     .from("settings")
     .update(updates)
+    .eq("id", current.id)
     .select()
-    .limit(1)
     .single();
 
   if (error) {
