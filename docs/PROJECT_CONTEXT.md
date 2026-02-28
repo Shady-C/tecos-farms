@@ -53,7 +53,8 @@ This document is the single source of truth for the project's vision, constraint
 │                   VERCEL (Hosting)               │
 │  ┌─────────────────┐    ┌──────────────────────┐ │
 │  │  Public Order    │    │   Admin Dashboard    │ │
-│  │  Form /order     │    │   /admin/* (auth)    │ │
+│  │  Form /          │    │   /admin/* (auth)    │ │
+│  │  (/order → /)    │    └──────────┬───────────┘ │
 │  └────────┬────────┘    └──────────┬───────────┘ │
 │           │                         │              │
 │  ┌────────▼─────────────────────────▼───────────┐ │
@@ -70,7 +71,7 @@ This document is the single source of truth for the project's vision, constraint
               └──────────────────┘
 ```
 
-- **Public**: Order form submits to `POST /api/orders`. Price comes from `GET /api/settings/public`.
+- **Public**: Order form at `/` submits to `POST /api/orders`. Price from `GET /api/settings/public`. `/order` redirects to `/`.
 - **Admin**: All other API routes and `/admin/*` require Supabase session. Use service-role server client for DB writes.
 
 ---
@@ -84,6 +85,7 @@ This document is the single source of truth for the project's vision, constraint
 | id               | uuid, PK | |
 | customer_name    | text     | |
 | phone            | text     | |
+| email            | text     | Optional. |
 | area             | text     | Delivery zone |
 | kilos            | decimal  | |
 | price_per_kg     | decimal  | Snapshot at order time |

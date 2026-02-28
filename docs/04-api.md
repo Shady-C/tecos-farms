@@ -47,7 +47,8 @@ Create a new order. No auth. Server sets price from settings and next delivery b
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | customer_name | string | Yes | Non-empty, trimmed |
-| phone | string | Yes | Non-empty, trimmed |
+| phone | string | Yes | Non-empty, trimmed (e.g. E.164: +255712345678) |
+| email | string | No | Optional; trimmed or omitted → stored as null |
 | area | string | Yes | Non-empty, trimmed (delivery zone) |
 | kilos | number | Yes | Positive number |
 
@@ -68,7 +69,7 @@ Create a new order. No auth. Server sets price from settings and next delivery b
 ```bash
 curl -X POST https://your-app.vercel.app/api/orders \
   -H "Content-Type: application/json" \
-  -d '{"customer_name":"Jane","phone":"+255...","area":"Kinondoni","kilos":10}'
+  -d '{"customer_name":"Jane","phone":"+255712345678","area":"Kinondoni","kilos":10}'
 ```
 
 **Example (fetch):**
@@ -79,9 +80,10 @@ const res = await fetch("/api/orders", {
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     customer_name: "Jane",
-    phone: "+255...",
+    phone: "+255712345678",
     area: "Kinondoni",
     kilos: 10,
+    email: "jane@example.com",  // optional
   }),
 });
 const data = await res.json(); // { id, total_price, delivery_batch }
@@ -100,7 +102,7 @@ List orders (admin). Requires session.
 | delivery_batch | string | Filter by batch (e.g. "2026-03-01") |
 | payment_status | string | Filter: unpaid, prepaid, paid |
 
-**Success (200):** JSON array of orders (see [types/index.ts](../types/index.ts) `Order`). Numbers for `kilos`, `price_per_kg`, `total_price` are serialized as numbers.
+**Success (200):** JSON array of orders (see [types/index.ts](../types/index.ts) `Order`). Each order includes `email` (string or null). Numbers for `kilos`, `price_per_kg`, `total_price` are serialized as numbers.
 
 **Errors:** 401 (no session), 500 (DB error).
 
@@ -233,4 +235,4 @@ Download Excel for a delivery batch (admin). Requires session.
 
 ---
 
-*Update notes: Initial version; reflects codebase as of 2026-02-24.*
+*Update notes: Initial version; reflects codebase as of 2026-02-24. Optional email and request shape as of 2026-02-27.*

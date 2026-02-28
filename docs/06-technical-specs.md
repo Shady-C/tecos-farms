@@ -10,7 +10,7 @@
 
 ### Order creation
 
-- Accept POST with `customer_name`, `phone`, `area`, `kilos` (validated: non-empty strings, kilos > 0).
+- Accept POST with `customer_name`, `phone`, `area`, `kilos` (validated: non-empty strings, kilos > 0). Optional `email`: if present and non-empty string, trimmed and stored; otherwise null.
 - Load current `price_per_kg` and `delivery_day` from settings (single row).
 - Compute `delivery_batch` = next occurrence of `delivery_day` (YYYY-MM-DD) via `getNextDeliveryBatch(delivery_day)`.
 - Compute `total_price` = round(kilos × price_per_kg).
@@ -72,6 +72,7 @@
 | id | uuid | PK, default gen_random_uuid() |
 | customer_name | text | NOT NULL |
 | phone | text | NOT NULL |
+| email | text | nullable (optional at order creation) |
 | area | text | NOT NULL |
 | kilos | decimal | NOT NULL, CHECK (kilos > 0) |
 | price_per_kg | decimal | NOT NULL |
@@ -100,11 +101,11 @@
 - **orders:** Policy "No direct access to orders" — FOR ALL, USING (false), WITH CHECK (false). All access via service role in API.
 - **settings:** Authenticated users can SELECT and UPDATE; anon cannot access (public price served via service role in API).
 
-**Migration:** [supabase/migrations/20260223000001_initial_schema.sql](../supabase/migrations/20260223000001_initial_schema.sql).
+**Migration:** [supabase/migrations/20260223000001_initial_schema.sql](../supabase/migrations/20260223000001_initial_schema.sql). Optional `email` added in [20260227000001_add_email_to_orders.sql](../supabase/migrations/20260227000001_add_email_to_orders.sql).
 
 ### Message formats (JSON)
 
-- Order create request: `{ customer_name, phone, area, kilos }`.
+- Order create request: `{ customer_name, phone, area, kilos, email? }`.
 - Order create response: `{ id, total_price, delivery_batch }`.
 - Order list response: array of `Order` (see [types](../types/index.ts)).
 - Settings response: `{ id, price_per_kg, order_cutoff_day, order_cutoff_time, delivery_day }`.
@@ -113,4 +114,4 @@
 
 ---
 
-*Update notes: Initial version; reflects codebase as of 2026-02-24.*
+*Update notes: Initial version; reflects codebase as of 2026-02-24. Optional email and order-form-on-home as of 2026-02-27.*
