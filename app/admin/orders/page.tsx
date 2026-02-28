@@ -47,9 +47,6 @@ export default function AdminOrdersPage() {
   }
 
   const exportBatch = deliveryBatch || batches[0] || "";
-  const pdfUrl = exportBatch
-    ? `/api/export/pdf?delivery_batch=${encodeURIComponent(exportBatch)}`
-    : null;
   const excelUrl = exportBatch
     ? `/api/export/excel?delivery_batch=${encodeURIComponent(exportBatch)}`
     : null;
@@ -83,16 +80,6 @@ export default function AdminOrdersPage() {
             <option value="prepaid">Prepaid</option>
             <option value="paid">Paid</option>
           </select>
-          {pdfUrl && (
-            <a
-              href={pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-4 px-4 py-2 bg-stone-700 text-white rounded-lg text-sm font-medium min-h-[44px] inline-flex items-center"
-            >
-              Export PDF
-            </a>
-          )}
           {excelUrl && (
             <a
               href={excelUrl}
