@@ -1,169 +1,153 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import type { Order } from "@/types";
+import { useState, useEffect, useCallback } from "react";
+import type { Order, Settings } from "@/types";
+import { getNextDeliveryDate } from "@/lib/delivery";
+import OrdersTable from "../components/OrdersTable";
+import QuickAddOrder from "../components/QuickAddOrder";
+import DeliveryNavigator from "../components/DeliveryNavigator";
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deliveryBatch, setDeliveryBatch] = useState("");
-  const [paymentFilter, setPaymentFilter] = useState("");
-  const [batches, setBatches] = useState<string[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [upcomingDate, setUpcomingDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
 
-  function fetchOrders() {
-    setLoading(true);
-    const params = new URLSearchParams();
-    if (deliveryBatch) params.set("delivery_batch", deliveryBatch);
-    if (paymentFilter) params.set("payment_status", paymentFilter);
-    fetch(`/api/orders?${params}`)
-      .then((res) => res.json())
-      .then((data: Order[]) => {
-        setOrders(Array.isArray(data) ? data : []);
-        const unique = new Set<string>();
-        (Array.isArray(data) ? data : []).forEach((o) => unique.add(o.delivery_batch));
-        setBatches((prev) => {
-          const next = new Set(prev);
-          unique.forEach((b) => next.add(b));
-          return Array.from(next).sort().reverse();
-        });
+  // Load settings first to determine the upcoming delivery date
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: Settings | null) => {
+        setSettings(data);
+        const deliveryDay = data?.delivery_day ?? "saturday";
+        const next = getNextDeliveryDate(deliveryDay);
+        setUpcomingDate(next);
+        setSelectedDate(next);
       })
+      .catch(() => {
+        const fallback = getNextDeliveryDate("saturday");
+        setUpcomingDate(fallback);
+        setSelectedDate(fallback);
+      });
+  }, []);
+
+  const fetchOrders = useCallback((date: string) => {
+    if (!date) return;
+    setLoading(true);
+    fetch(`/api/orders?delivery_date=${encodeURIComponent(date)}`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: Order[]) => setOrders(Array.isArray(data) ? data : []))
       .catch(() => setOrders([]))
       .finally(() => setLoading(false));
-  }
+  }, []);
 
   useEffect(() => {
-    fetchOrders();
-  }, [deliveryBatch, paymentFilter]);
+    if (selectedDate) fetchOrders(selectedDate);
+  }, [selectedDate, fetchOrders]);
 
   async function updateOrder(
     id: string,
-    updates: { payment_status?: Order["payment_status"]; order_status?: Order["order_status"] }
+    updates: {
+      payment_status?: Order["payment_status"];
+      order_status?: Order["order_status"];
+    }
   ) {
+    setBusyOrderId(id);
     const res = await fetch(`/api/orders/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
     });
-    if (res.ok) fetchOrders();
+    if (res.ok) fetchOrders(selectedDate);
+    setBusyOrderId(null);
   }
 
-  const exportBatch = deliveryBatch || batches[0] || "";
-  const excelUrl = exportBatch
-    ? `/api/export/excel?delivery_batch=${encodeURIComponent(exportBatch)}`
+  const excelUrl = selectedDate
+    ? `/api/export/excel?delivery_date=${encodeURIComponent(selectedDate)}`
     : null;
 
+  const totalKg = orders.reduce((sum, o) => sum + Number(o.kilos), 0);
+
+  function scrollToQuickAdd() {
+    document
+      .getElementById("quick-add-order")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
-    <div>
-      <div className="flex flex-wrap items-center gap-4 mb-6">
-        <h1 className="text-xl font-semibold text-stone-800">Orders</h1>
-        <div className="flex flex-wrap gap-2 items-center">
-          <label className="text-sm text-stone-600">Batch</label>
-          <select
-            value={deliveryBatch}
-            onChange={(e) => setDeliveryBatch(e.target.value)}
-            className="border border-stone-300 rounded-lg px-3 py-2 min-h-[44px] text-sm"
-          >
-            <option value="">All</option>
-            {batches.map((b) => (
-              <option key={b} value={b}>
-                {b}
-              </option>
-            ))}
-          </select>
-          <label className="text-sm text-stone-600 ml-2">Payment</label>
-          <select
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value)}
-            className="border border-stone-300 rounded-lg px-3 py-2 min-h-[44px] text-sm"
-          >
-            <option value="">All</option>
-            <option value="unpaid">Unpaid</option>
-            <option value="prepaid">Prepaid</option>
-            <option value="paid">Paid</option>
-          </select>
-          {excelUrl && (
-            <a
-              href={excelUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-green-700 text-white rounded-lg text-sm font-medium min-h-[44px] inline-flex items-center"
-            >
-              Export Excel
-            </a>
+    <div className="text-[var(--admin-text)]">
+      <div className="mb-7 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-[var(--font-syne)] text-[26px] font-bold tracking-[-0.5px]">
+            Orders
+          </h1>
+          <p className="mt-1 text-[11px] text-[var(--admin-muted)]">
+            Delivery cycle management
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {selectedDate && upcomingDate && (
+            <DeliveryNavigator
+              selectedDate={selectedDate}
+              upcomingDate={upcomingDate}
+              orderCount={orders.length}
+              totalKg={totalKg}
+              onNavigate={setSelectedDate}
+            />
           )}
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              title="Placeholder button"
+              className="rounded-md border border-[var(--admin-border)] bg-[var(--admin-surface-2)] px-4 py-2 text-[11px] text-[var(--admin-text)] hover:border-[var(--admin-dim)]"
+            >
+              Send Blast
+            </button>
+            {excelUrl && (
+              <a
+                href={excelUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center rounded-md border border-[var(--admin-border)] bg-[var(--admin-surface-2)] px-4 py-2 text-[11px] text-[var(--admin-text)] hover:border-[var(--admin-dim)]"
+              >
+                Export CSV
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={scrollToQuickAdd}
+              className="rounded-md bg-[var(--admin-accent)] px-4 py-2 text-[11px] font-medium text-white hover:bg-[#d05520]"
+            >
+              + Add Order
+            </button>
+          </div>
         </div>
       </div>
 
       {loading ? (
-        <p className="text-stone-500">Loading…</p>
-      ) : orders.length === 0 ? (
-        <p className="text-stone-600">No orders found.</p>
+        <p className="text-[var(--admin-muted)]">Loading...</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full border border-stone-200 rounded-lg overflow-hidden">
-            <thead className="bg-stone-100 text-left text-sm font-medium text-stone-700">
-              <tr>
-                <th className="p-3">Name</th>
-                <th className="p-3">Phone</th>
-                <th className="p-3">Area</th>
-                <th className="p-3">Kilos</th>
-                <th className="p-3">Total (TZS)</th>
-                <th className="p-3">Payment</th>
-                <th className="p-3">Status</th>
-                <th className="p-3">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stone-200">
-              {orders.map((o) => (
-                <tr key={o.id} className="bg-white">
-                  <td className="p-3">{o.customer_name}</td>
-                  <td className="p-3">{o.phone}</td>
-                  <td className="p-3">{o.area}</td>
-                  <td className="p-3">{o.kilos}</td>
-                  <td className="p-3">{o.total_price.toLocaleString()}</td>
-                  <td className="p-3">{o.payment_status}</td>
-                  <td className="p-3">{o.order_status}</td>
-                  <td className="p-3 flex flex-wrap gap-2">
-                    {o.payment_status !== "paid" && (
-                      <button
-                        type="button"
-                        onClick={() => updateOrder(o.id, { payment_status: "paid" })}
-                        className="px-2 py-1 text-sm bg-green-600 text-white rounded"
-                      >
-                        Mark paid
-                      </button>
-                    )}
-                    {o.payment_status !== "unpaid" && (
-                      <button
-                        type="button"
-                        onClick={() => updateOrder(o.id, { payment_status: "unpaid" })}
-                        className="px-2 py-1 text-sm bg-stone-500 text-white rounded"
-                      >
-                        Unpaid
-                      </button>
-                    )}
-                    {o.order_status !== "confirmed" && (
-                      <button
-                        type="button"
-                        onClick={() => updateOrder(o.id, { order_status: "confirmed" })}
-                        className="px-2 py-1 text-sm bg-blue-600 text-white rounded"
-                      >
-                        Confirm
-                      </button>
-                    )}
-                    {o.order_status !== "delivered" && (
-                      <button
-                        type="button"
-                        onClick={() => updateOrder(o.id, { order_status: "delivered" })}
-                        className="px-2 py-1 text-sm bg-stone-700 text-white rounded"
-                      >
-                        Delivered
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="flex flex-col items-start gap-5 lg:flex-row">
+          <div className="min-w-0 flex-1">
+            <OrdersTable
+              orders={orders}
+              onUpdateOrder={updateOrder}
+              busyOrderId={busyOrderId}
+            />
+          </div>
+          <div className="w-full shrink-0 lg:w-80">
+            <QuickAddOrder
+              pricePerKg={settings?.price_per_kg ?? 0}
+              enabledMethods={
+                settings?.enabled_payment_methods ?? ["cash", "mobile_money"]
+              }
+              onCreated={() => fetchOrders(selectedDate)}
+            />
+          </div>
         </div>
       )}
     </div>

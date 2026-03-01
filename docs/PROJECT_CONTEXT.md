@@ -78,45 +78,61 @@ This document is the single source of truth for the project's vision, constraint
 
 ## Database Schema
 
+### customers
+
+| Column     | Type        | Notes |
+|------------|-------------|--------|
+| id         | uuid, PK    | |
+| name       | text        | |
+| phone      | text        | Unique — natural identity key |
+| email      | text        | Optional |
+| created_at | timestamptz | |
+
+### addresses (append-only; old orders keep their original address)
+
+| Column         | Type        | Notes |
+|----------------|-------------|--------|
+| id             | uuid, PK    | |
+| customer_id    | uuid, FK    | → customers.id |
+| street_address | text        | Required |
+| address_line_2 | text        | Optional |
+| landmark       | text        | Optional |
+| is_default     | boolean     | Most recent address for customer |
+| created_at     | timestamptz | |
+
 ### orders
 
-| Column           | Type     | Notes |
-|------------------|----------|--------|
-| id               | uuid, PK | |
-| customer_name    | text     | |
-| phone            | text     | |
-| email            | text     | Optional. |
-| area             | text     | Delivery zone |
-| kilos            | decimal  | |
-| price_per_kg     | decimal  | Snapshot at order time |
-| total_price      | decimal  | |
-| payment_status   | enum     | unpaid, prepaid, paid |
-| payment_method   | enum     | cash, mobile_money, null |
-| order_status     | enum     | pending, confirmed, delivered |
-| delivery_batch   | text     | e.g. "2026-02-28" for grouping |
-| notes            | text     | Optional, for farm team |
-| created_at       | timestamptz | |
+| Column         | Type        | Notes |
+|----------------|-------------|--------|
+| id             | uuid, PK    | |
+| customer_id    | uuid, FK    | → customers.id |
+| address_id     | uuid, FK    | → addresses.id |
+| kilos          | decimal     | |
+| price_per_kg   | decimal     | Snapshot at order time |
+| total_price    | decimal     | Snapshot at order time |
+| payment_status | enum        | unpaid, prepaid, paid |
+| payment_method | enum        | cash, mobile_money, null |
+| order_status   | enum        | pending, confirmed, delivered |
+| delivery_date  | date        | Delivery date for the cycle (e.g. 2026-02-28) |
+| notes          | text        | Optional, for farm team |
+| created_at     | timestamptz | |
 
 ### settings (single row)
 
-| Column            | Type    | Notes |
-|-------------------|---------|--------|
-| id                | uuid PK | |
-| price_per_kg      | decimal | |
-| order_cutoff_day  | text    | e.g. "wednesday" |
-| order_cutoff_time | time    | |
-| delivery_day      | text    | e.g. "saturday" |
+| Column                  | Type    | Notes |
+|-------------------------|---------|--------|
+| id                      | uuid PK | |
+| price_per_kg            | decimal | |
+| min_kg                  | decimal | |
+| order_cutoff_day        | text    | e.g. "wednesday" |
+| order_cutoff_time       | time    | |
+| delivery_day            | text    | e.g. "saturday" |
+| mobile_money_details    | jsonb   | Optional: number, name, instructions |
+| enabled_payment_methods | jsonb   | Array of "cash", "mobile_money" |
 
-### customers (Phase 2+)
-
-| Column       | Type   | Notes |
-|--------------|--------|--------|
-| id           | uuid PK | |
-| name         | text   | |
-| phone        | text   | unique |
-| area         | text   | |
-| total_orders | int    | |
-| created_at   | timestamptz | |
+> **Delivery zones deferred to Phase 3.** The driver handles routing today. When maps/routing integration is built, a `delivery_zones` table and `zone_id` FK on `addresses` will be added without schema breakage. See ADR-0004.
+>
+> **`delivery_date` is a `date` column** (not text). It stores the expected delivery date for the cycle. All orders placed before the cutoff for a given week share the same `delivery_date`. The admin dashboard groups and navigates by this date.
 
 ---
 
@@ -151,7 +167,7 @@ This document is the single source of truth for the project's vision, constraint
 1. **No customer auth** — Order form is anonymous; identify by phone.
 2. **Snapshot price at order time** — `price_per_kg` and `total_price` stored per order; no retroactive change.
 3. **Admin auth only** — Supabase Auth; one or few admin users (create in Dashboard or script).
-4. **Public order submit** — Via API route with server-side Supabase (service role); validate and set `delivery_batch` and price snapshot there.
+4. **Public order submit** — Via API route with server-side Supabase (service role); validate and set `delivery_date` and price snapshot there.
 5. **PDF server-side only** — Use `@react-pdf/renderer` in API route; no heavy PDF lib on client.
 6. **Mobile-first** — Touch-friendly, minimal JS on form, system or one web font.
 

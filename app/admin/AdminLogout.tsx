@@ -3,7 +3,11 @@
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
-export default function AdminLogout() {
+type AdminLogoutProps = {
+  className?: string;
+};
+
+export default function AdminLogout({ className }: AdminLogoutProps) {
   const router = useRouter();
 
   async function handleLogout() {
@@ -17,7 +21,10 @@ export default function AdminLogout() {
     <button
       type="button"
       onClick={handleLogout}
-      className="text-stone-600 text-sm hover:text-stone-900 min-h-[44px] min-w-[44px] flex items-center justify-center"
+      className={
+        className ??
+        "text-stone-600 text-sm hover:text-stone-900 min-h-[44px] min-w-[44px] flex items-center justify-center"
+      }
     >
       Logout
     </button>

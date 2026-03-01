@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Settings, DeliveryZone } from "@/types";
+import type { Settings, MobileMoneyDetails } from "@/types";
 
 const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
@@ -17,15 +17,19 @@ export default function AdminSettingsPage() {
 
   // Order settings
   const [pricePerKg, setPricePerKg] = useState("");
+  const [minKg, setMinKg] = useState("");
   const [orderCutoffDay, setOrderCutoffDay] = useState("");
   const [orderCutoffTime, setOrderCutoffTime] = useState("");
   const [deliveryDay, setDeliveryDay] = useState("");
 
-  // Delivery zones
-  const [zones, setZones] = useState<DeliveryZone[]>([]);
-  const [newZoneName, setNewZoneName] = useState("");
-  const [newZoneIcon, setNewZoneIcon] = useState("");
-  const [newZoneDetail, setNewZoneDetail] = useState("");
+  // Payment methods
+  const [enabledMethods, setEnabledMethods] = useState<string[]>(["cash", "mobile_money"]);
+  const [mobileMoneyDetails, setMobileMoneyDetails] = useState<MobileMoneyDetails>({
+    number: "",
+    name: "",
+    instructions: "",
+  });
+
 
   useEffect(() => {
     fetch("/api/settings")
@@ -33,6 +37,7 @@ export default function AdminSettingsPage() {
       .then((data: Settings) => {
         setSettings(data);
         setPricePerKg(String(data.price_per_kg));
+        setMinKg(String(data.min_kg ?? 1));
         setOrderCutoffDay(data.order_cutoff_day ?? "");
         setOrderCutoffTime(
           typeof data.order_cutoff_time === "string"
@@ -40,7 +45,12 @@ export default function AdminSettingsPage() {
             : ""
         );
         setDeliveryDay(data.delivery_day ?? "");
-        setZones(Array.isArray(data.delivery_zones) ? data.delivery_zones : []);
+        setEnabledMethods(
+          Array.isArray(data.enabled_payment_methods) ? data.enabled_payment_methods : ["cash", "mobile_money"]
+        );
+        if (data.mobile_money_details) {
+          setMobileMoneyDetails(data.mobile_money_details);
+        }
       })
       .catch(() => setMessage({ type: "error", text: "Failed to load settings" }))
       .finally(() => setLoading(false));
@@ -56,10 +66,12 @@ export default function AdminSettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         price_per_kg: parseFloat(pricePerKg) || 0,
+        min_kg: parseFloat(minKg) || 1,
         order_cutoff_day: orderCutoffDay.trim() || "wednesday",
         order_cutoff_time: orderCutoffTime || "23:59:00",
         delivery_day: deliveryDay.trim() || "saturday",
-        delivery_zones: zones,
+        enabled_payment_methods: enabledMethods,
+        mobile_money_details: enabledMethods.includes("mobile_money") ? mobileMoneyDetails : null,
       }),
     });
     setSaving(false);
@@ -71,52 +83,28 @@ export default function AdminSettingsPage() {
     }
   }
 
-  function addZone() {
-    const name = newZoneName.trim();
-    const icon = newZoneIcon.trim() || "📍";
-    const detail = newZoneDetail.trim();
-    if (!name) return;
-    setZones((prev) => [...prev, { name, icon, detail }]);
-    setNewZoneName("");
-    setNewZoneIcon("");
-    setNewZoneDetail("");
-  }
-
-  function removeZone(index: number) {
-    setZones((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  function updateZoneField(index: number, field: keyof DeliveryZone, value: string) {
-    setZones((prev) =>
-      prev.map((z, i) => (i === index ? { ...z, [field]: value } : z))
-    );
-  }
-
   if (loading) {
-    return <p className="text-stone-500">Loading…</p>;
+    return <p className="text-[var(--admin-muted)]">Loading...</p>;
   }
 
   if (!settings) {
     return (
-      <p className="text-red-600">
+      <p className="text-[var(--admin-red)]">
         {message?.type === "error" ? message.text : "Could not load settings."}
       </p>
     );
   }
 
   return (
-    <div>
-      <h1 className="text-xl font-semibold text-stone-800 mb-6">Settings</h1>
-      <form
-        onSubmit={handleSubmit}
-        className="max-w-lg flex flex-col gap-6"
-      >
+    <div className="text-[var(--admin-text)]">
+      <h1 className="mb-6 font-[var(--font-syne)] text-[26px] font-bold tracking-[-0.5px]">Settings</h1>
+      <form onSubmit={handleSubmit} className="max-w-3xl space-y-5">
         {message && (
           <p
             className={
               message.type === "ok"
-                ? "text-sm text-green-700 bg-green-50 p-2 rounded"
-                : "text-sm text-red-600 bg-red-50 p-2 rounded"
+                ? "rounded-md border border-[#4caf7d66] bg-[#4caf7d22] px-3 py-2 text-sm text-[var(--admin-green)]"
+                : "rounded-md border border-[#e0525266] bg-[#e0525222] px-3 py-2 text-sm text-[var(--admin-red)]"
             }
           >
             {message.text}
@@ -124,156 +112,172 @@ export default function AdminSettingsPage() {
         )}
 
         {/* Core settings card */}
-        <div className="flex flex-col gap-4 p-4 bg-white rounded-lg border border-stone-200 shadow-sm">
-          <h2 className="text-sm font-semibold text-stone-600 uppercase tracking-wide">Order Settings</h2>
+        <section className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-surface)] p-5">
+          <h2 className="mb-4 text-[9px] font-semibold uppercase tracking-[2px] text-[var(--admin-muted)]">
+            Order Settings
+          </h2>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-stone-700">Price per kg (TZS)</span>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              value={pricePerKg}
-              onChange={(e) => setPricePerKg(e.target.value)}
-              required
-              className="border border-stone-300 rounded-lg px-3 py-2 min-h-[44px]"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-stone-700">Order cutoff day</span>
-            <select
-              value={orderCutoffDay}
-              onChange={(e) => setOrderCutoffDay(e.target.value)}
-              className="border border-stone-300 rounded-lg px-3 py-2 min-h-[44px]"
-            >
-              {DAYS.map((d) => (
-                <option key={d} value={d}>{capitalize(d)}</option>
-              ))}
-            </select>
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-stone-700">Order cutoff time</span>
-            <input
-              type="time"
-              value={orderCutoffTime}
-              onChange={(e) => setOrderCutoffTime(e.target.value)}
-              className="border border-stone-300 rounded-lg px-3 py-2 min-h-[44px]"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1">
-            <span className="text-sm font-medium text-stone-700">Delivery day</span>
-            <select
-              value={deliveryDay}
-              onChange={(e) => setDeliveryDay(e.target.value)}
-              className="border border-stone-300 rounded-lg px-3 py-2 min-h-[44px]"
-            >
-              {DAYS.map((d) => (
-                <option key={d} value={d}>{capitalize(d)}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        {/* Delivery zones card */}
-        <div className="flex flex-col gap-4 p-4 bg-white rounded-lg border border-stone-200 shadow-sm">
-          <h2 className="text-sm font-semibold text-stone-600 uppercase tracking-wide">Delivery Zones</h2>
-          <p className="text-xs text-stone-500">These zones appear as selectable cards on the public order form.</p>
-
-          {/* Existing zones */}
-          {zones.length === 0 ? (
-            <p className="text-sm text-stone-400 italic">No zones yet. Add one below.</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              {zones.map((zone, i) => (
-                <div key={i} className="flex gap-2 items-start p-3 bg-stone-50 rounded-lg border border-stone-200">
-                  <div className="flex flex-col gap-1.5 flex-1 min-w-0">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={zone.icon}
-                        onChange={(e) => updateZoneField(i, "icon", e.target.value)}
-                        placeholder="🏙️"
-                        className="border border-stone-300 rounded px-2 py-1 text-sm w-16 text-center"
-                        title="Icon (emoji)"
-                      />
-                      <input
-                        type="text"
-                        value={zone.name}
-                        onChange={(e) => updateZoneField(i, "name", e.target.value)}
-                        placeholder="Zone name"
-                        className="border border-stone-300 rounded px-2 py-1 text-sm flex-1"
-                      />
-                    </div>
-                    <input
-                      type="text"
-                      value={zone.detail}
-                      onChange={(e) => updateZoneField(i, "detail", e.target.value)}
-                      placeholder="Sub-areas (e.g. Mikocheni, Sinza, Mwenge)"
-                      className="border border-stone-300 rounded px-2 py-1 text-sm w-full"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeZone(i)}
-                    className="text-stone-400 hover:text-red-600 transition-colors p-1 flex-shrink-0 mt-0.5"
-                    title="Remove zone"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Add new zone */}
-          <div className="border-t border-stone-200 pt-3 flex flex-col gap-2">
-            <p className="text-xs font-medium text-stone-500">Add a zone</p>
-            <div className="flex gap-2">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[var(--admin-muted)]">Price per kg (TZS)</span>
               <input
-                type="text"
-                value={newZoneIcon}
-                onChange={(e) => setNewZoneIcon(e.target.value)}
-                placeholder="🏙️"
-                className="border border-stone-300 rounded-lg px-2 py-2 text-sm w-16 text-center"
-                title="Icon (emoji)"
+                type="number"
+                min="0"
+                step="1"
+                value={pricePerKg}
+                onChange={(e) => setPricePerKg(e.target.value)}
+                required
+                className="rounded-md border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)]"
               />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[var(--admin-muted)]">Minimum order (kg)</span>
               <input
-                type="text"
-                value={newZoneName}
-                onChange={(e) => setNewZoneName(e.target.value)}
-                placeholder="Zone name"
-                className="border border-stone-300 rounded-lg px-3 py-2 text-sm flex-1"
-                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addZone())}
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={minKg}
+                onChange={(e) => setMinKg(e.target.value)}
+                required
+                className="rounded-md border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)]"
               />
-            </div>
-            <input
-              type="text"
-              value={newZoneDetail}
-              onChange={(e) => setNewZoneDetail(e.target.value)}
-              placeholder="Sub-areas (e.g. Mikocheni, Sinza, Mwenge)"
-              className="border border-stone-300 rounded-lg px-3 py-2 text-sm w-full"
-              onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addZone())}
-            />
-            <button
-              type="button"
-              onClick={addZone}
-              disabled={!newZoneName.trim()}
-              className="self-start px-4 py-2 bg-stone-700 text-white rounded-lg text-sm font-medium disabled:opacity-40"
-            >
-              + Add Zone
-            </button>
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[var(--admin-muted)]">Order cutoff day</span>
+              <select
+                value={orderCutoffDay}
+                onChange={(e) => setOrderCutoffDay(e.target.value)}
+                className="rounded-md border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)]"
+              >
+                {DAYS.map((d) => (
+                  <option key={d} value={d}>
+                    {capitalize(d)}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[var(--admin-muted)]">Order cutoff time</span>
+              <input
+                type="time"
+                value={orderCutoffTime}
+                onChange={(e) => setOrderCutoffTime(e.target.value)}
+                className="rounded-md border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)]"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[var(--admin-muted)]">Delivery day</span>
+              <select
+                value={deliveryDay}
+                onChange={(e) => setDeliveryDay(e.target.value)}
+                className="rounded-md border border-[var(--admin-border)] bg-[var(--admin-bg)] px-3 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)]"
+              >
+                {DAYS.map((d) => (
+                  <option key={d} value={d}>
+                    {capitalize(d)}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-        </div>
+        </section>
+
+        {/* Payment methods card */}
+        <section className="rounded-xl border border-[var(--admin-border)] bg-[var(--admin-surface)] p-5">
+          <h2 className="mb-4 text-[9px] font-semibold uppercase tracking-[2px] text-[var(--admin-muted)]">
+            Payment Methods
+          </h2>
+          <p className="mb-3 text-xs text-[var(--admin-muted)]">
+            Control which payment options are available on the public order form.
+          </p>
+
+          <div className="flex flex-col gap-3">
+            <label className="flex items-center gap-2 text-sm text-[var(--admin-text)]">
+              <input
+                type="checkbox"
+                checked={enabledMethods.includes("cash")}
+                onChange={(e) => {
+                  setEnabledMethods((prev) =>
+                    e.target.checked
+                      ? [...prev, "cash"]
+                      : prev.filter((m) => m !== "cash")
+                  );
+                }}
+              />
+              Cash on Delivery
+            </label>
+
+            <label className="flex items-center gap-2 text-sm text-[var(--admin-text)]">
+              <input
+                type="checkbox"
+                checked={enabledMethods.includes("mobile_money")}
+                onChange={(e) => {
+                  setEnabledMethods((prev) =>
+                    e.target.checked
+                      ? [...prev, "mobile_money"]
+                      : prev.filter((m) => m !== "mobile_money")
+                  );
+                }}
+              />
+              Mobile Money (M-Pesa)
+            </label>
+
+            {enabledMethods.includes("mobile_money") && (
+              <div className="ml-6 mt-1 flex flex-col gap-3 rounded-lg border border-[var(--admin-border)] bg-[var(--admin-bg)] p-4">
+                <p className="text-[9px] font-semibold uppercase tracking-[2px] text-[var(--admin-muted)]">
+                  Mobile Money Details
+                </p>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs text-[var(--admin-muted)]">Phone Number</span>
+                  <input
+                    type="text"
+                    value={mobileMoneyDetails.number}
+                    onChange={(e) =>
+                      setMobileMoneyDetails((prev) => ({ ...prev, number: e.target.value }))
+                    }
+                    placeholder="e.g. 0712345678"
+                    className="rounded-md border border-[var(--admin-border)] bg-[var(--admin-surface-2)] px-3 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)]"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs text-[var(--admin-muted)]">Account Name</span>
+                  <input
+                    type="text"
+                    value={mobileMoneyDetails.name}
+                    onChange={(e) =>
+                      setMobileMoneyDetails((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    placeholder="e.g. Teco's Farms"
+                    className="rounded-md border border-[var(--admin-border)] bg-[var(--admin-surface-2)] px-3 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)]"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-xs text-[var(--admin-muted)]">Instructions</span>
+                  <textarea
+                    value={mobileMoneyDetails.instructions}
+                    onChange={(e) =>
+                      setMobileMoneyDetails((prev) => ({ ...prev, instructions: e.target.value }))
+                    }
+                    placeholder="e.g. Send payment to this number and include your name as reference"
+                    rows={2}
+                    className="rounded-md border border-[var(--admin-border)] bg-[var(--admin-surface-2)] px-3 py-2.5 text-sm text-[var(--admin-text)] outline-none focus:border-[var(--admin-accent)]"
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+        </section>
 
         <button
           type="submit"
           disabled={saving}
-          className="px-4 py-3 bg-green-700 text-white rounded-lg font-medium min-h-[44px] disabled:opacity-60"
+          className="rounded-md bg-[var(--admin-accent)] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#d05520] disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save all settings"}
+          {saving ? "Saving..." : "Save all settings"}
         </button>
       </form>
     </div>

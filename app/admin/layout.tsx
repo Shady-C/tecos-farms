@@ -1,6 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import AdminLogout from "./AdminLogout";
+import { DM_Mono, Syne } from "next/font/google";
+import AdminShell from "./components/AdminShell";
+
+const syne = Syne({
+  subsets: ["latin"],
+  variable: "--font-syne",
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
+const dmMono = DM_Mono({
+  subsets: ["latin"],
+  variable: "--font-dm-mono",
+  weight: ["300", "400", "500"],
+  display: "swap",
+});
 
 export default async function AdminLayout({
   children,
@@ -12,28 +26,18 @@ export default async function AdminLayout({
     data: { session },
   } = await supabase.auth.getSession();
 
+  const fallbackName = session?.user?.email?.split("@")[0] ?? "Admin User";
+  const userName = fallbackName
+    .split(".")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
   return (
-    <div className="min-h-screen bg-stone-50">
-      {session && (
-        <nav className="border-b border-stone-200 bg-white px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
-            <Link
-              href="/admin/orders"
-              className="text-stone-700 font-medium hover:text-stone-900"
-            >
-              Orders
-            </Link>
-            <Link
-              href="/admin/settings"
-              className="text-stone-700 font-medium hover:text-stone-900"
-            >
-              Settings
-            </Link>
-          </div>
-          <AdminLogout />
-        </nav>
-      )}
-      <div className="p-4 md:p-6">{children}</div>
+    <div
+      className={`admin-dark ${syne.variable} ${dmMono.variable} font-[var(--font-dm-mono)] min-h-screen`}
+    >
+      <div className="hidden font-[var(--font-syne)]" />
+      <AdminShell userName={userName}>{children}</AdminShell>
     </div>
   );
 }

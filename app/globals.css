@@ -46,6 +46,27 @@ body {
   color: var(--text);
 }
 
+.admin-dark {
+  --admin-bg: #0f0e0c;
+  --admin-surface: #1a1814;
+  --admin-surface-2: #222018;
+  --admin-border: #2e2b24;
+  --admin-accent: #e8622a;
+  --admin-accent-2: #f0a04b;
+  --admin-green: #4caf7d;
+  --admin-red: #e05252;
+  --admin-yellow: #f0c94b;
+  --admin-text: #f0ebe2;
+  --admin-muted: #7a7468;
+  --admin-dim: #4a4640;
+}
+
+.admin-dark body,
+.admin-dark {
+  background: var(--admin-bg);
+  color: var(--admin-text);
+}
+
 input::placeholder,
 textarea::placeholder {
   color: var(--dim);

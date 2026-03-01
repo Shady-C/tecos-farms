@@ -2,11 +2,10 @@
 
 import { useState, useEffect } from "react";
 import countries from "../data/countries.json";
-import type { DeliveryZone } from "@/types";
+import type { MobileMoneyDetails } from "@/types";
 import HeroHeader from "@/components/order/HeroHeader";
 import PriceBanner from "@/components/order/PriceBanner";
 import KiloSelector from "@/components/order/KiloSelector";
-import ZoneGrid from "@/components/order/ZoneGrid";
 import PaymentMethodPicker, { type PaymentChoice } from "@/components/order/PaymentMethodPicker";
 import OrderSummary from "@/components/order/OrderSummary";
 import SubmitBar from "@/components/order/SubmitBar";
@@ -20,10 +19,12 @@ const sortedCountries = [...countries].sort((a, b) => {
 
 type PublicSettings = {
   price_per_kg: number;
+  min_kg: number;
   delivery_day?: string;
   order_cutoff_day?: string;
   order_cutoff_time?: string;
-  delivery_zones: DeliveryZone[];
+  enabled_payment_methods: string[];
+  mobile_money_details: MobileMoneyDetails | null;
 };
 
 type SuccessData = {
@@ -73,7 +74,8 @@ export default function OrderPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [kg, setKg] = useState(5);
-  const [selectedZone, setSelectedZone] = useState("");
+  const [address1, setAddress1] = useState("");
+  const [address2, setAddress2] = useState("");
   const [landmark, setLandmark] = useState("");
   const [payment, setPayment] = useState<PaymentChoice>("mpesa_prepay");
   const [notes, setNotes] = useState("");
@@ -83,20 +85,17 @@ export default function OrderPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data.price_per_kg != null) {
-          const zones: DeliveryZone[] = Array.isArray(data.delivery_zones)
-            ? data.delivery_zones
-            : [];
           setSettings({
             price_per_kg: data.price_per_kg,
+            min_kg: data.min_kg ?? 1,
             delivery_day: data.delivery_day,
             order_cutoff_day: data.order_cutoff_day,
             order_cutoff_time: data.order_cutoff_time,
-            delivery_zones: zones,
+            enabled_payment_methods: Array.isArray(data.enabled_payment_methods)
+              ? data.enabled_payment_methods
+              : ["cash", "mobile_money"],
+            mobile_money_details: data.mobile_money_details ?? null,
           });
-          // Pre-select first zone
-          if (zones.length > 0) {
-            setSelectedZone(zones[0].name);
-          }
         } else {
           setSettingsError(true);
         }
@@ -119,12 +118,10 @@ export default function OrderPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!settings || kg < 2) return;
+    if (!settings || kg < settings.min_kg) return;
 
     setSubmitState("submitting");
     setErrorMessage(null);
-
-    const area = [selectedZone, landmark.trim()].filter(Boolean).join(" — ") || "Not specified";
 
     try {
       const res = await fetch("/api/orders", {
@@ -134,7 +131,9 @@ export default function OrderPage() {
           customer_name: name.trim(),
           phone: `${countryCode}${phone.trim()}`,
           email: email.trim() || null,
-          area,
+          street_address: address1.trim(),
+          address_line_2: address2.trim() || null,
+          landmark: landmark.trim() || null,
           kilos: kg,
           payment_method: paymentMethodMap[payment],
           prepay: payment === "mpesa_prepay",
@@ -166,7 +165,8 @@ export default function OrderPage() {
     setPhone("");
     setEmail("");
     setKg(5);
-    setSelectedZone(settings?.delivery_zones[0]?.name ?? "");
+    setAddress1("");
+    setAddress2("");
     setLandmark("");
     setPayment("mpesa_prepay");
     setNotes("");
@@ -303,7 +303,7 @@ export default function OrderPage() {
                 </div>
 
                 {/* Email */}
-                <div className="px-4 pt-3 pb-4">
+                <div className="px-4 pt-3 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
                   <div
                     className="text-[11px] font-semibold uppercase tracking-widest mb-1.5"
                     style={{ color: "var(--muted)" }}
@@ -323,6 +323,69 @@ export default function OrderPage() {
                     style={{ fontFamily: "var(--font-outfit), sans-serif", color: "var(--text)" }}
                   />
                 </div>
+
+                {/* Address Line 1 */}
+                <div className="px-4 pt-3 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
+                  <div
+                    className="text-[11px] font-semibold uppercase tracking-widest mb-1.5 flex items-center gap-1.5"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    Address <span style={{ color: "var(--accent)", fontSize: 13 }}>*</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={address1}
+                    onChange={(e) => setAddress1(e.target.value)}
+                    required
+                    placeholder="e.g. Mikocheni, Dar es Salaam"
+                    autoComplete="address-line1"
+                    className="w-full bg-transparent border-none outline-none text-base font-medium"
+                    style={{ fontFamily: "var(--font-outfit), sans-serif", color: "var(--text)" }}
+                  />
+                </div>
+
+                {/* Address Line 2 */}
+                <div className="px-4 pt-3 pb-3" style={{ borderBottom: "1px solid var(--border)" }}>
+                  <div
+                    className="text-[11px] font-semibold uppercase tracking-widest mb-1.5"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    Address Line 2{" "}
+                    <span style={{ color: "var(--dim)", textTransform: "none", fontWeight: 400, letterSpacing: 0 }}>
+                      (optional)
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={address2}
+                    onChange={(e) => setAddress2(e.target.value)}
+                    placeholder="e.g. Apartment 4B, Sinza Road"
+                    autoComplete="address-line2"
+                    className="w-full bg-transparent border-none outline-none text-base font-medium"
+                    style={{ fontFamily: "var(--font-outfit), sans-serif", color: "var(--text)" }}
+                  />
+                </div>
+
+                {/* Landmark */}
+                <div className="px-4 pt-3 pb-4">
+                  <div
+                    className="text-[11px] font-semibold uppercase tracking-widest mb-1.5"
+                    style={{ color: "var(--muted)" }}
+                  >
+                    Landmark{" "}
+                    <span style={{ color: "var(--dim)", textTransform: "none", fontWeight: 400, letterSpacing: 0 }}>
+                      (optional)
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={landmark}
+                    onChange={(e) => setLandmark(e.target.value)}
+                    placeholder="e.g. Near Shoprite, opposite the mosque"
+                    className="w-full bg-transparent border-none outline-none text-base font-medium"
+                    style={{ fontFamily: "var(--font-outfit), sans-serif", color: "var(--text)" }}
+                  />
+                </div>
               </div>
             </Section>
 
@@ -331,34 +394,24 @@ export default function OrderPage() {
               <KiloSelector
                 kg={kg}
                 pricePerKg={settings.price_per_kg}
+                minKg={settings.min_kg}
                 onChange={setKg}
               />
             </Section>
 
-            {/* 3. Delivery Zone */}
-            {settings.delivery_zones.length > 0 && (
-              <Section label="Delivery Zone" delayIndex={2}>
-                <ZoneGrid
-                  zones={settings.delivery_zones}
-                  selectedZone={selectedZone}
-                  landmark={landmark}
-                  onZoneChange={setSelectedZone}
-                  onLandmarkChange={setLandmark}
-                />
-              </Section>
-            )}
-
-            {/* 4. Payment */}
-            <Section label="How Will You Pay?" delayIndex={3}>
+            {/* 3. Payment */}
+            <Section label="How Will You Pay?" delayIndex={2}>
               <PaymentMethodPicker
                 selected={payment}
                 totalTzs={total}
+                enabledMethods={settings.enabled_payment_methods}
+                mobileMoneyDetails={settings.mobile_money_details}
                 onChange={setPayment}
               />
             </Section>
 
-            {/* 5. Notes */}
-            <Section label="Special Notes (Optional)" delayIndex={4}>
+            {/* 4. Notes */}
+            <Section label="Special Notes (Optional)" delayIndex={3}>
               <div
                 className="rounded-2xl overflow-hidden"
                 style={{ background: "var(--white)", border: "1px solid var(--border)", boxShadow: "var(--shadow)" }}
@@ -378,8 +431,8 @@ export default function OrderPage() {
               </div>
             </Section>
 
-            {/* 6. Order Summary */}
-            <Section label="Order Summary" delayIndex={5}>
+            {/* 5. Order Summary */}
+            <Section label="Order Summary" delayIndex={4}>
               <OrderSummary kg={kg} pricePerKg={settings.price_per_kg} payment={payment} />
             </Section>
           </form>
@@ -390,8 +443,8 @@ export default function OrderPage() {
             disabled={
               !name.trim() ||
               !phone.trim() ||
-              kg < 2 ||
-              (settings.delivery_zones.length > 0 && !selectedZone)
+              !address1.trim() ||
+              kg < settings.min_kg
             }
             formId="order-form"
           />

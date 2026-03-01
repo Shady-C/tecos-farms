@@ -3,12 +3,12 @@
 import { useState } from "react";
 
 const QUICK_KG = [2, 3, 5, 8, 10, 15];
-const MIN_KG = 2;
 const MAX_KG = 50;
 
 interface KiloSelectorProps {
   kg: number;
   pricePerKg: number;
+  minKg?: number;
   onChange: (kg: number) => void;
 }
 
@@ -16,8 +16,9 @@ function fmt(n: number) {
   return n.toLocaleString("en-TZ");
 }
 
-export default function KiloSelector({ kg, pricePerKg, onChange }: KiloSelectorProps) {
+export default function KiloSelector({ kg, pricePerKg, minKg = 2, onChange }: KiloSelectorProps) {
   const [bumpKey, setBumpKey] = useState(0);
+  const MIN_KG = minKg;
 
   function triggerBump(newKg: number) {
     onChange(newKg);
@@ -108,7 +109,7 @@ export default function KiloSelector({ kg, pricePerKg, onChange }: KiloSelectorP
 
         {/* Quick chips */}
         <div className="flex flex-wrap gap-2 mt-3.5">
-          {QUICK_KG.map((val) => (
+          {QUICK_KG.filter((val) => val >= MIN_KG).map((val) => (
             <button
               key={val}
               type="button"

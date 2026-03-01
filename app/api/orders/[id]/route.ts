@@ -43,7 +43,11 @@ export async function PATCH(
     .from("orders")
     .update(updates)
     .eq("id", id)
-    .select()
+    .select(`
+      *,
+      customer:customers(*),
+      address:addresses(*)
+    `)
     .single();
 
   if (error) {
@@ -53,19 +57,5 @@ export async function PATCH(
     return NextResponse.json({ error: "Order not found" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    id: data.id,
-    customer_name: data.customer_name,
-    phone: data.phone,
-    area: data.area,
-    kilos: Number(data.kilos),
-    price_per_kg: Number(data.price_per_kg),
-    total_price: Number(data.total_price),
-    payment_status: data.payment_status,
-    payment_method: data.payment_method,
-    order_status: data.order_status,
-    delivery_batch: data.delivery_batch,
-    notes: data.notes,
-    created_at: data.created_at,
-  });
+  return NextResponse.json(data);
 }

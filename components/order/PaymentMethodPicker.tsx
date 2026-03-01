@@ -1,3 +1,5 @@
+import type { MobileMoneyDetails } from "@/types";
+
 export type PaymentChoice = "mpesa_prepay" | "cash" | "mpesa_delivery";
 
 interface PaymentOption {
@@ -5,32 +7,38 @@ interface PaymentOption {
   icon: string;
   title: string;
   desc: string;
+  requires: "mobile_money" | "cash";
 }
 
-const PAYMENT_OPTIONS: PaymentOption[] = [
+const ALL_PAYMENT_OPTIONS: PaymentOption[] = [
   {
     id: "mpesa_prepay",
     icon: "📱",
     title: "M-Pesa (Prepay)",
     desc: "Send money now · Your order is secured",
+    requires: "mobile_money",
   },
   {
     id: "cash",
     icon: "🚚",
     title: "Cash on Delivery",
     desc: "Pay when your pork arrives",
+    requires: "cash",
   },
   {
     id: "mpesa_delivery",
     icon: "📲",
     title: "M-Pesa on Delivery",
     desc: "Mobile money when delivered",
+    requires: "mobile_money",
   },
 ];
 
 interface PaymentMethodPickerProps {
   selected: PaymentChoice;
   totalTzs: number;
+  enabledMethods?: string[];
+  mobileMoneyDetails?: MobileMoneyDetails | null;
   onChange: (method: PaymentChoice) => void;
 }
 
@@ -41,15 +49,21 @@ function fmt(n: number) {
 export default function PaymentMethodPicker({
   selected,
   totalTzs,
+  enabledMethods = ["cash", "mobile_money"],
+  mobileMoneyDetails,
   onChange,
 }: PaymentMethodPickerProps) {
+  const visibleOptions = ALL_PAYMENT_OPTIONS.filter((opt) =>
+    enabledMethods.includes(opt.requires)
+  );
+
   return (
     <div
       className="rounded-2xl overflow-hidden"
       style={{ background: "var(--white)", border: "1px solid var(--border)", boxShadow: "var(--shadow)" }}
     >
       <div className="flex flex-col gap-2.5 p-3.5">
-        {PAYMENT_OPTIONS.map((opt) => {
+        {visibleOptions.map((opt) => {
           const isSelected = selected === opt.id;
           return (
             <button
@@ -123,13 +137,25 @@ export default function PaymentMethodPicker({
             📱 M-Pesa Payment Details
           </div>
           <div className="text-xs leading-7" style={{ color: "#2a5a3a" }}>
-            Send to: <strong>+255 712 XXX XXX</strong>
-            <br />
-            Name: <strong>Teco&apos;s Farms</strong>
-            <br />
-            Amount: <strong>{fmt(totalTzs)} TZS</strong>
-            <br />
-            Reference: <strong>Your name + PORK</strong>
+            {mobileMoneyDetails ? (
+              <>
+                Send to: <strong>{mobileMoneyDetails.number}</strong>
+                <br />
+                Name: <strong>{mobileMoneyDetails.name}</strong>
+                <br />
+                Amount: <strong>{fmt(totalTzs)} TZS</strong>
+                <br />
+                {mobileMoneyDetails.instructions && (
+                  <span>{mobileMoneyDetails.instructions}</span>
+                )}
+              </>
+            ) : (
+              <>
+                Amount: <strong>{fmt(totalTzs)} TZS</strong>
+                <br />
+                Reference: <strong>Your name + PORK</strong>
+              </>
+            )}
           </div>
         </div>
       )}

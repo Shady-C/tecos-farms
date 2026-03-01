@@ -1,6 +1,6 @@
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { getSession } from "@/lib/supabase/auth";
-import { getNextDeliveryBatch } from "@/lib/delivery";
+import { getNextDeliveryDate } from "@/lib/delivery";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -8,7 +8,9 @@ export async function POST(request: Request) {
     customer_name?: string;
     phone?: string;
     email?: string;
-    area?: string;
+    street_address?: string;
+    address_line_2?: string;
+    landmark?: string;
     kilos?: number;
     payment_method?: "cash" | "mobile_money";
     prepay?: boolean;
@@ -20,19 +22,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { customer_name, phone, email, area, kilos, payment_method, prepay, notes } = body;
+  const { customer_name, phone, email, street_address, address_line_2, landmark, kilos, payment_method, prepay, notes } = body;
+
   if (
     typeof customer_name !== "string" ||
     !customer_name.trim() ||
     typeof phone !== "string" ||
     !phone.trim() ||
-    typeof area !== "string" ||
-    !area.trim() ||
+    typeof street_address !== "string" ||
+    !street_address.trim() ||
     typeof kilos !== "number" ||
     kilos <= 0
   ) {
     return NextResponse.json(
-      { error: "Missing or invalid: customer_name, phone, area, kilos (positive number)" },
+      { error: "Missing or invalid: customer_name, phone, street_address, kilos (positive number)" },
       { status: 400 }
     );
   }
@@ -46,50 +49,83 @@ export async function POST(request: Request) {
     .single();
 
   if (settingsError || !settings) {
-    return NextResponse.json(
-      { error: "Could not load price settings" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Could not load price settings" }, { status: 500 });
   }
 
   const pricePerKg = Number(settings.price_per_kg);
-  const deliveryBatch = getNextDeliveryBatch(settings.delivery_day ?? "saturday");
+  const deliveryDate = getNextDeliveryDate(settings.delivery_day ?? "saturday");
   const totalPrice = Math.round(kilos * pricePerKg);
 
-  // Determine payment status from method + prepay intent
   const resolvedPaymentMethod = payment_method ?? null;
   const paymentStatus =
-    resolvedPaymentMethod === "mobile_money" && prepay === true
-      ? "prepaid"
-      : "unpaid";
+    resolvedPaymentMethod === "mobile_money" && prepay === true ? "prepaid" : "unpaid";
 
-  const { data: order, error } = await supabase
+  // 1. Upsert customer by phone (phone is the natural identity key)
+  const { data: customer, error: customerError } = await supabase
+    .from("customers")
+    .upsert(
+      {
+        name: customer_name.trim(),
+        phone: phone.trim(),
+        email: typeof email === "string" && email.trim() ? email.trim() : null,
+      },
+      { onConflict: "phone" }
+    )
+    .select("id")
+    .single();
+
+  if (customerError || !customer) {
+    return NextResponse.json({ error: customerError?.message ?? "Could not create customer" }, { status: 500 });
+  }
+
+  // 2. Mark any previous default address as non-default, then insert the new address
+  await supabase
+    .from("addresses")
+    .update({ is_default: false })
+    .eq("customer_id", customer.id);
+
+  const { data: address, error: addressError } = await supabase
+    .from("addresses")
+    .insert({
+      customer_id: customer.id,
+      street_address: street_address.trim(),
+      address_line_2: typeof address_line_2 === "string" && address_line_2.trim() ? address_line_2.trim() : null,
+      landmark: typeof landmark === "string" && landmark.trim() ? landmark.trim() : null,
+      is_default: true,
+    })
+    .select("id")
+    .single();
+
+  if (addressError || !address) {
+    return NextResponse.json({ error: addressError?.message ?? "Could not create address" }, { status: 500 });
+  }
+
+  // 3. Insert the order
+  const { data: order, error: orderError } = await supabase
     .from("orders")
     .insert({
-      customer_name: customer_name.trim(),
-      phone: phone.trim(),
-      email: typeof email === "string" && email.trim() ? email.trim() : null,
-      area: area.trim(),
+      customer_id: customer.id,
+      address_id: address.id,
       kilos,
       price_per_kg: pricePerKg,
       total_price: totalPrice,
-      delivery_batch: deliveryBatch,
+      delivery_date: deliveryDate,
       payment_method: resolvedPaymentMethod,
       payment_status: paymentStatus,
       order_status: "pending",
       notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
     })
-    .select("id, total_price, delivery_batch")
+    .select("id, total_price, delivery_date")
     .single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (orderError || !order) {
+    return NextResponse.json({ error: orderError?.message ?? "Could not create order" }, { status: 500 });
   }
 
   return NextResponse.json({
     id: order.id,
     total_price: order.total_price,
-    delivery_batch: order.delivery_batch,
+    delivery_date: order.delivery_date,
   });
 }
 
@@ -100,16 +136,20 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const deliveryBatch = searchParams.get("delivery_batch") ?? undefined;
+  const deliveryDate = searchParams.get("delivery_date") ?? undefined;
   const paymentStatus = searchParams.get("payment_status") ?? undefined;
 
   const supabase = createServiceRoleClient();
   let query = supabase
     .from("orders")
-    .select("*")
+    .select(`
+      *,
+      customer:customers(*),
+      address:addresses(*)
+    `)
     .order("created_at", { ascending: false });
 
-  if (deliveryBatch) query = query.eq("delivery_batch", deliveryBatch);
+  if (deliveryDate) query = query.eq("delivery_date", deliveryDate);
   if (paymentStatus) query = query.eq("payment_status", paymentStatus);
 
   const { data, error } = await query;
@@ -118,22 +158,5 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const orders = (data ?? []).map((row) => ({
-    id: row.id,
-    customer_name: row.customer_name,
-    phone: row.phone,
-    email: row.email ?? null,
-    area: row.area,
-    kilos: Number(row.kilos),
-    price_per_kg: Number(row.price_per_kg),
-    total_price: Number(row.total_price),
-    payment_status: row.payment_status,
-    payment_method: row.payment_method,
-    order_status: row.order_status,
-    delivery_batch: row.delivery_batch,
-    notes: row.notes,
-    created_at: row.created_at,
-  }));
-
-  return NextResponse.json(orders);
+  return NextResponse.json(data ?? []);
 }
